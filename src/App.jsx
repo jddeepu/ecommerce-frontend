@@ -1316,7 +1316,7 @@ export default function App() {
       {/* TOP HEADER: Amazon / Flipkart Style Responsive Navigation */}
       <header className="sticky top-0 z-40 bg-[#131921] text-white shadow-md">
         {/* ROW 1: Logo + Desktop Search + Action Icons */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
           
           {/* Brand Logo */}
           <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer shrink-0" onClick={() => { setSelectedCategory(null); setSearchQuery(''); }}>
@@ -1324,13 +1324,13 @@ export default function App() {
               <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
               <span>MEGASTORE</span>
             </div>
-            <div className="hidden lg:block text-[9px] text-gray-400 font-semibold tracking-wider uppercase leading-tight">
+            <div className="hidden 2xl:block text-[9px] text-gray-400 font-semibold tracking-wider uppercase leading-tight">
               Multi-Vendor<br/><span className="text-[#febd69]">Marketplace</span>
             </div>
           </div>
 
-          {/* Delivery Location Widget (hidden on mobile, visible on xl+) */}
-          <div className="hidden xl:flex items-center text-xs text-gray-300 hover:text-white cursor-pointer px-2 py-1 rounded border border-transparent hover:border-gray-600 shrink-0">
+          {/* Delivery Location Widget (visible on 2xl+ screens only to keep header spacious) */}
+          <div className="hidden 2xl:flex items-center text-xs text-gray-300 hover:text-white cursor-pointer px-2 py-1 rounded border border-transparent hover:border-gray-600 shrink-0">
             <MapPin className="w-4 h-4 mr-1 text-[#f08804]" />
             <div>
               <p className="text-[10px] text-gray-400">Deliver to</p>
@@ -1338,14 +1338,14 @@ export default function App() {
             </div>
           </div>
 
-          {/* DESKTOP SEARCH BAR (visible on tablet/desktop md+) */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-2 lg:mx-4 items-center">
+          {/* DESKTOP SEARCH BAR (visible on tablet/desktop md+, guaranteed generous width) */}
+          <div className="hidden md:flex flex-1 min-w-[260px] lg:min-w-[340px] xl:min-w-[420px] max-w-2xl mx-1 sm:mx-2 lg:mx-4 items-center">
             <div className="w-full h-10 flex items-stretch rounded-lg overflow-hidden bg-white shadow-sm border-2 border-transparent focus-within:border-[#febd69] focus-within:ring-2 focus-within:ring-[#febd69]/40 transition">
               <div className="flex-1 relative flex items-center">
                 <input 
                   type="text"
-                  placeholder="Search products, brands, electronics, dairy, milk, fashion..."
-                  className="w-full h-full pl-3.5 pr-10 text-xs lg:text-sm text-gray-900 bg-transparent focus:outline-none"
+                  placeholder="Search products, brands, electronics, milk, fashion..."
+                  className="w-full h-full pl-3.5 pr-10 text-xs sm:text-sm text-gray-900 bg-transparent focus:outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -1362,7 +1362,7 @@ export default function App() {
               </div>
               <button 
                 type="button"
-                className="bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-5 flex items-center justify-center transition cursor-pointer font-bold shrink-0"
+                className="bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-4 sm:px-5 flex items-center justify-center transition cursor-pointer font-bold shrink-0"
                 title="Search"
               >
                 <Search className="w-4.5 h-4.5 font-bold" />
@@ -1371,41 +1371,44 @@ export default function App() {
           </div>
 
           {/* Right Header Navigation Icons */}
-          <div className="flex items-center space-x-1.5 sm:space-x-3 lg:space-x-4 text-sm shrink-0">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 lg:space-x-3 text-sm shrink-0">
             
             {/* Super Admin Control: Admin sees Admin Tower + Seller Hub */}
             {isAdmin && (
-              <>
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button 
                   onClick={() => setCurrentView('admin_panel')}
-                  className="flex items-center space-x-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition shadow-lg ring-2 ring-purple-400/50 cursor-pointer active:scale-95"
+                  className="flex items-center space-x-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-md ring-1 ring-purple-400/50 cursor-pointer active:scale-95 shrink-0"
                   title="Open Super Admin Control Tower"
                 >
-                  <ShieldCheck className="w-4 h-4 text-white" />
-                  <span className="hidden sm:inline">Admin Tower 👑</span>
-                  <span className="sm:hidden">👑</span>
+                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                  <span className="hidden xl:inline">Admin Tower</span>
+                  <span className="xl:hidden">Admin</span>
+                  <span>👑</span>
                 </button>
                 <button 
                   onClick={() => setCurrentView('seller_hub')}
-                  className="hidden md:flex items-center space-x-1 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition shadow cursor-pointer active:scale-95"
+                  className="hidden sm:flex items-center space-x-1 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow cursor-pointer active:scale-95 shrink-0"
                   title="Inspect Seller Central Hub"
                 >
-                  <Store className="w-4 h-4 text-slate-950" />
-                  <span>Seller Hub 🏪</span>
+                  <Store className="w-3.5 h-3.5 text-slate-950" />
+                  <span className="hidden xl:inline">Seller Hub</span>
+                  <span className="xl:hidden">Seller</span>
+                  <span>🏪</span>
                 </button>
-              </>
+              </div>
             )}
 
             {/* Seller Control: Seller only sees Seller Hub */}
             {isSeller && !isAdmin && (
               <button 
                 onClick={() => setCurrentView('seller_hub')}
-                className="flex items-center space-x-1 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition shadow cursor-pointer active:scale-95"
+                className="flex items-center space-x-1 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow cursor-pointer active:scale-95 shrink-0"
                 title="Open Seller Central Hub"
               >
-                <Store className="w-4 h-4 text-slate-950" />
-                <span className="hidden sm:inline">Seller Hub 🏪</span>
-                <span className="sm:hidden">🏪</span>
+                <Store className="w-3.5 h-3.5 text-slate-950" />
+                <span className="hidden sm:inline">Seller Hub</span>
+                <span>🏪</span>
               </button>
             )}
 
@@ -1413,7 +1416,7 @@ export default function App() {
             {!isAdmin && !isSeller && (
               <button 
                 onClick={() => { setAuthTab('seller'); setIsAuthOpen(true); }}
-                className="hidden md:flex items-center space-x-1.5 text-xs text-slate-200 hover:text-[#febd69] px-2.5 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition cursor-pointer"
+                className="hidden xl:flex items-center space-x-1.5 text-xs text-slate-200 hover:text-[#febd69] px-2.5 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition cursor-pointer shrink-0"
                 title="Become a Seller on MegaStore"
               >
                 <Store className="w-3.5 h-3.5 text-[#febd69]" />
@@ -1423,9 +1426,8 @@ export default function App() {
 
             {/* Account / User Menu */}
             {currentUser ? (
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
                 <div className="text-right text-xs">
-                  <p className="hidden sm:block text-gray-400 font-medium text-[11px] truncate max-w-[100px]">{currentUser.name}</p>
                   <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider border ${
                     isAdmin 
                       ? 'bg-purple-950 text-purple-300 border-purple-700' 
@@ -1438,7 +1440,7 @@ export default function App() {
                 </div>
                 <button 
                   onClick={handleLogout}
-                  className="text-[11px] bg-red-900/60 hover:bg-red-800 text-red-200 px-2 py-1 rounded font-semibold cursor-pointer"
+                  className="text-[11px] bg-red-900/60 hover:bg-red-800 text-red-200 px-2 py-1 rounded font-semibold cursor-pointer shrink-0"
                   title="Log out"
                 >
                   Logout
@@ -1447,7 +1449,7 @@ export default function App() {
             ) : (
               <button 
                 onClick={() => { setAuthTab('login'); setIsAuthOpen(true); }}
-                className="flex items-center space-x-1 hover:text-[#febd69] cursor-pointer px-1 py-1"
+                className="flex items-center space-x-1 hover:text-[#febd69] cursor-pointer px-1 py-1 shrink-0"
                 title="Sign in to your account"
               >
                 <User className="w-5 h-5 text-gray-300" />
@@ -1461,7 +1463,7 @@ export default function App() {
             {/* Returns & Orders (Amazon Style) */}
             <button 
               onClick={handleOpenOrders}
-              className="hidden lg:flex flex-col text-left px-2 py-1 rounded hover:border hover:border-gray-600 text-xs cursor-pointer text-gray-200 hover:text-white leading-tight"
+              className="hidden 2xl:flex flex-col text-left px-2 py-1 rounded hover:border hover:border-gray-600 text-xs cursor-pointer text-gray-200 hover:text-white leading-tight shrink-0"
             >
               <span className="text-[10px] text-gray-400">Returns</span>
               <span className="font-bold text-white">&amp; Orders</span>
@@ -1474,12 +1476,10 @@ export default function App() {
               title="Manage Daily Milk & Grocery Subscriptions"
             >
               <span className="text-sm">🥛</span>
-              <div className="hidden sm:block text-left text-[10px] leading-tight">
-                <span className="text-emerald-400 font-bold block">Subscriptions</span>
-                <span className="font-extrabold text-white text-[10px]">
-                  {subscriptions.filter(s => s.status === 'ACTIVE').length} Active
-                </span>
-              </div>
+              <span className="text-emerald-400 font-bold text-xs hidden lg:inline">Subscriptions</span>
+              <span className="bg-emerald-500 text-slate-950 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full ml-0.5">
+                {subscriptions.filter(s => s.status === 'ACTIVE').length}
+              </span>
             </button>
 
             {/* Shopping Cart Button */}
