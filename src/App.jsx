@@ -566,13 +566,73 @@ export default function App() {
   // Available unique brands for faceted pills
   const availableBrands = ['ALL', ...Array.from(new Set(products.map(p => p.brand).filter(Boolean)))];
 
+  // Smart multi-keyword, root-stemmed & synonym search matching
+  const matchProductSearch = (product, query) => {
+    if (!query) return true;
+    const cleanQuery = query.trim().toLowerCase();
+    if (!cleanQuery) return true;
+
+    // Combine all searchable text from product
+    const searchable = `
+      ${product.title || ''} 
+      ${product.brand || ''} 
+      ${product.categoryName || ''} 
+      ${product.description || ''} 
+      ${product.storeName || ''}
+    `.toLowerCase();
+
+    // 1. Direct substring match
+    if (searchable.includes(cleanQuery)) return true;
+
+    // 2. Query words token matching
+    const queryTokens = cleanQuery.split(/\s+/).filter(Boolean);
+    
+    // Synonyms / category aliases
+    const synonyms = {
+      'electric': ['electronics', 'electronic', 'device', 'gadget', 'charger', 'appliance', 'oneplus', 'sony', 'cooker', 'pot'],
+      'electronics': ['electric', 'electronic', 'phone', 'gadget', 'headphone', 'tech', 'oneplus', 'sony'],
+      'electronic': ['electronics', 'electric', 'tech', 'gadget', 'device', 'phone'],
+      'phone': ['mobile', 'oneplus', 'smartphone', 'electronics', 'device'],
+      'mobile': ['phone', 'oneplus', 'smartphone', 'electronics'],
+      'headphone': ['sony', 'audio', 'earphone', 'electronics', 'wh-1000xm5'],
+      'headphones': ['sony', 'audio', 'earphone', 'electronics', 'wh-1000xm5'],
+      'milk': ['dairy', 'cow', 'buffalo', 'fresh', 'doodh', 'a2', 'gir'],
+      'dairy': ['milk', 'ghee', 'paneer', 'dahi', 'curd', 'butter', 'makkhan', 'mawa'],
+      'dahi': ['curd', 'probiotic', 'dairy', 'yogurt'],
+      'curd': ['dahi', 'probiotic', 'dairy', 'yogurt'],
+      'ghee': ['bilona', 'desi', 'dairy', 'vedic'],
+      'paneer': ['cottage', 'cheese', 'dairy', 'malai'],
+      'shoe': ['shoes', 'sneakers', 'running', 'nike', 'footwear', 'fashion'],
+      'shoes': ['shoe', 'sneakers', 'running', 'nike', 'footwear', 'fashion'],
+      'cloth': ['clothes', 'fashion', 'apparel', 'jacket', 'denim', 'wear'],
+      'clothes': ['fashion', 'apparel', 'jacket', 'denim', 'wear'],
+      'dress': ['fashion', 'apparel', 'cloth', 'clothes'],
+      'jacket': ['denim', 'fashion', 'apparel', 'roadster', 'cloth'],
+      'book': ['books', 'stationery', 'atomic', 'habits', 'reading'],
+      'books': ['book', 'stationery', 'atomic', 'habits', 'reading'],
+      'pot': ['cooker', 'instant', 'kitchen', 'home', 'appliances', 'electric']
+    };
+
+    // Check if every token matches via substring, stem, or synonym
+    return queryTokens.every(token => {
+      if (searchable.includes(token)) return true;
+      if (token.length >= 4) {
+        const root4 = token.slice(0, 4); // "elec", "dair", "fash"
+        if (searchable.includes(root4)) return true;
+        const root5 = token.slice(0, 5); // "elect"
+        if (searchable.includes(root5)) return true;
+      }
+      const aliasList = synonyms[token] || [];
+      return aliasList.some(alias => searchable.includes(alias));
+    });
+  };
+
   // Dynamic Filter & Sort Products
   const filteredProducts = products.filter(p => {
-    const matchesCat = selectedCategory ? (p.categoryName === selectedCategory || p.categoryId === selectedCategory) : true;
-    const matchesSearch = searchQuery ? (
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (p.brand && p.brand.toLowerCase().includes(searchQuery.toLowerCase()))
-    ) : true;
+    const q = searchQuery ? searchQuery.trim().toLowerCase() : '';
+    // If user has typed in search bar, search across all categories globally
+    const matchesCat = q ? true : (selectedCategory ? (p.categoryName === selectedCategory || p.categoryId === selectedCategory) : true);
+    const matchesSearch = matchProductSearch(p, q);
     const matchesStock = inStockOnly ? ((p.stock !== undefined ? p.stock : 25) > 0) : true;
     const matchesBrand = selectedBrand === 'ALL' ? true : p.brand === selectedBrand;
     
@@ -1253,85 +1313,81 @@ export default function App() {
         </div>
       )}
 
-      {/* TOP HEADER: Amazon / Flipkart Style Navigation */}
-      <header className="sticky top-0 z-40 bg-[#131921] text-white">
-        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+      {/* TOP HEADER: Amazon / Flipkart Style Responsive Navigation */}
+      <header className="sticky top-0 z-40 bg-[#131921] text-white shadow-md">
+        {/* ROW 1: Logo + Desktop Search + Action Icons */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Brand Logo */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { setSelectedCategory(null); setSearchQuery(''); }}>
-            <div className="bg-[#f08804] text-slate-950 p-2 rounded-lg font-black tracking-tighter text-xl flex items-center gap-1 shadow">
-              <ShoppingBag className="w-6 h-6" />
+          <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer shrink-0" onClick={() => { setSelectedCategory(null); setSearchQuery(''); }}>
+            <div className="bg-[#f08804] text-slate-950 px-2.5 py-1.5 rounded-lg font-black tracking-tighter text-lg sm:text-xl flex items-center gap-1 shadow">
+              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
               <span>MEGASTORE</span>
             </div>
-            <div className="hidden sm:block text-[10px] text-gray-400 font-semibold tracking-wider uppercase">
+            <div className="hidden lg:block text-[9px] text-gray-400 font-semibold tracking-wider uppercase leading-tight">
               Multi-Vendor<br/><span className="text-[#febd69]">Marketplace</span>
             </div>
           </div>
 
-          {/* Delivery Location Widget */}
-          <div className="hidden lg:flex items-center text-xs text-gray-300 hover:text-white cursor-pointer px-2 py-1 rounded border border-transparent hover:border-gray-600">
+          {/* Delivery Location Widget (hidden on mobile, visible on xl+) */}
+          <div className="hidden xl:flex items-center text-xs text-gray-300 hover:text-white cursor-pointer px-2 py-1 rounded border border-transparent hover:border-gray-600 shrink-0">
             <MapPin className="w-4 h-4 mr-1 text-[#f08804]" />
             <div>
               <p className="text-[10px] text-gray-400">Deliver to</p>
-              <p className="font-bold text-white">Mumbai 400001</p>
+              <p className="font-bold text-white whitespace-nowrap">Mumbai 400001</p>
             </div>
           </div>
 
-          {/* Search Bar with Category Select */}
-          <div className="flex-1 max-w-2xl flex items-center">
-            <div className="relative w-full flex">
-              <select 
-                className="hidden md:block bg-gray-100 text-gray-800 text-xs px-3 py-2.5 rounded-l-md border-r border-gray-300 focus:outline-none cursor-pointer"
-                value={selectedCategory || ''}
-                onChange={(e) => setSelectedCategory(e.target.value || null)}
+          {/* DESKTOP SEARCH BAR (visible on tablet/desktop md+) */}
+          <div className="hidden md:flex flex-1 max-w-2xl mx-2 lg:mx-4 items-center">
+            <div className="w-full h-10 flex items-stretch rounded-lg overflow-hidden bg-white shadow-sm border-2 border-transparent focus-within:border-[#febd69] focus-within:ring-2 focus-within:ring-[#febd69]/40 transition">
+              <div className="flex-1 relative flex items-center">
+                <input 
+                  type="text"
+                  placeholder="Search products, brands, electronics, dairy, milk, fashion..."
+                  className="w-full h-full pl-3.5 pr-10 text-xs lg:text-sm text-gray-900 bg-transparent focus:outline-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 text-gray-400 hover:text-gray-700 p-1 rounded-full cursor-pointer transition"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <button 
+                type="button"
+                className="bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-5 flex items-center justify-center transition cursor-pointer font-bold shrink-0"
+                title="Search"
               >
-                <option value="">🏷️ All Categories</option>
-                {categories.map(c => {
-                  const categoryLogos = {
-                    "Dairy & Fresh Milk": "🥛",
-                    "Electronics": "📱",
-                    "Fashion & Apparel": "👗",
-                    "Home & Kitchen": "🍳",
-                    "Beauty & Personal Care": "💄",
-                    "Books & Stationery": "📚"
-                  };
-                  return (
-                    <option key={c.id} value={c.name}>
-                      {categoryLogos[c.name] || "📦"} {c.name}
-                    </option>
-                  );
-                })}
-              </select>
-              <input 
-                type="text"
-                placeholder="Search products, brands, electronics, dairy..."
-                className="w-full px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none md:rounded-none rounded-l-md"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button className="bg-[#febd69] hover:bg-[#f3a847] text-gray-900 px-5 flex items-center justify-center rounded-r-md transition">
-                <Search className="w-5 h-5 font-bold" />
+                <Search className="w-4.5 h-4.5 font-bold" />
               </button>
             </div>
           </div>
 
           {/* Right Header Navigation Icons */}
-          <div className="flex items-center space-x-3 sm:space-x-5 text-sm">
+          <div className="flex items-center space-x-1.5 sm:space-x-3 lg:space-x-4 text-sm shrink-0">
             
             {/* Super Admin Control: Admin sees Admin Tower + Seller Hub */}
             {isAdmin && (
               <>
                 <button 
                   onClick={() => setCurrentView('admin_panel')}
-                  className="flex items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-black transition shadow-lg ring-2 ring-purple-400/50 cursor-pointer active:scale-95"
+                  className="flex items-center space-x-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition shadow-lg ring-2 ring-purple-400/50 cursor-pointer active:scale-95"
                   title="Open Super Admin Control Tower"
                 >
                   <ShieldCheck className="w-4 h-4 text-white" />
-                  <span>Admin Tower 👑</span>
+                  <span className="hidden sm:inline">Admin Tower 👑</span>
+                  <span className="sm:hidden">👑</span>
                 </button>
                 <button 
                   onClick={() => setCurrentView('seller_hub')}
-                  className="hidden md:flex items-center space-x-1.5 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black transition shadow cursor-pointer active:scale-95"
+                  className="hidden md:flex items-center space-x-1 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition shadow cursor-pointer active:scale-95"
                   title="Inspect Seller Central Hub"
                 >
                   <Store className="w-4 h-4 text-slate-950" />
@@ -1344,11 +1400,12 @@ export default function App() {
             {isSeller && !isAdmin && (
               <button 
                 onClick={() => setCurrentView('seller_hub')}
-                className="flex items-center space-x-1.5 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black transition shadow cursor-pointer active:scale-95"
+                className="flex items-center space-x-1 bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition shadow cursor-pointer active:scale-95"
                 title="Open Seller Central Hub"
               >
                 <Store className="w-4 h-4 text-slate-950" />
-                <span>Seller Hub 🏪</span>
+                <span className="hidden sm:inline">Seller Hub 🏪</span>
+                <span className="sm:hidden">🏪</span>
               </button>
             )}
 
@@ -1356,20 +1413,20 @@ export default function App() {
             {!isAdmin && !isSeller && (
               <button 
                 onClick={() => { setAuthTab('seller'); setIsAuthOpen(true); }}
-                className="hidden sm:flex items-center space-x-1.5 text-xs text-slate-200 hover:text-[#febd69] px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition cursor-pointer"
+                className="hidden md:flex items-center space-x-1.5 text-xs text-slate-200 hover:text-[#febd69] px-2.5 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition cursor-pointer"
                 title="Become a Seller on MegaStore"
               >
-                <Store className="w-4 h-4 text-[#febd69]" />
-                <span className="font-semibold">Become a Seller</span>
+                <Store className="w-3.5 h-3.5 text-[#febd69]" />
+                <span className="font-semibold text-xs">Become a Seller</span>
               </button>
             )}
 
             {/* Account / User Menu */}
             {currentUser ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <div className="text-right text-xs">
-                  <p className="text-gray-400 font-medium">Hello, {currentUser.name}</p>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider border ${
+                  <p className="hidden sm:block text-gray-400 font-medium text-[11px] truncate max-w-[100px]">{currentUser.name}</p>
+                  <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider border ${
                     isAdmin 
                       ? 'bg-purple-950 text-purple-300 border-purple-700' 
                       : isSeller 
@@ -1381,7 +1438,8 @@ export default function App() {
                 </div>
                 <button 
                   onClick={handleLogout}
-                  className="text-xs bg-red-900/60 hover:bg-red-800 text-red-200 px-2 py-1 rounded"
+                  className="text-[11px] bg-red-900/60 hover:bg-red-800 text-red-200 px-2 py-1 rounded font-semibold cursor-pointer"
+                  title="Log out"
                 >
                   Logout
                 </button>
@@ -1389,12 +1447,13 @@ export default function App() {
             ) : (
               <button 
                 onClick={() => { setAuthTab('login'); setIsAuthOpen(true); }}
-                className="flex items-center space-x-1 hover:text-[#febd69] cursor-pointer"
+                className="flex items-center space-x-1 hover:text-[#febd69] cursor-pointer px-1 py-1"
+                title="Sign in to your account"
               >
                 <User className="w-5 h-5 text-gray-300" />
-                <div className="text-left hidden sm:block text-xs">
+                <div className="text-left hidden sm:block text-xs leading-tight">
                   <p className="text-gray-400 text-[10px]">Hello, Sign in</p>
-                  <p className="font-bold">Account &amp; Lists</p>
+                  <p className="font-bold">Account</p>
                 </div>
               </button>
             )}
@@ -1402,7 +1461,7 @@ export default function App() {
             {/* Returns & Orders (Amazon Style) */}
             <button 
               onClick={handleOpenOrders}
-              className="hidden sm:flex flex-col text-left px-2 py-1 rounded hover:border hover:border-gray-600 text-xs cursor-pointer text-gray-200 hover:text-white"
+              className="hidden lg:flex flex-col text-left px-2 py-1 rounded hover:border hover:border-gray-600 text-xs cursor-pointer text-gray-200 hover:text-white leading-tight"
             >
               <span className="text-[10px] text-gray-400">Returns</span>
               <span className="font-bold text-white">&amp; Orders</span>
@@ -1411,28 +1470,61 @@ export default function App() {
             {/* Milk & Dairy Subscriptions Button (Country Delight Model) */}
             <button 
               onClick={() => setIsSubscriptionsOpen(true)}
-              className="hidden md:flex flex-col text-left px-2.5 py-1 rounded border border-emerald-500/40 bg-emerald-950/40 text-xs cursor-pointer hover:border-emerald-400 transition active:scale-95"
+              className="flex items-center space-x-1 px-2 sm:px-2.5 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/40 text-xs cursor-pointer hover:border-emerald-400 transition active:scale-95 shrink-0"
               title="Manage Daily Milk & Grocery Subscriptions"
             >
-              <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
-                🥛 Subscriptions
-              </span>
-              <span className="font-extrabold text-white text-[11px]">
-                {subscriptions.filter(s => s.status === 'ACTIVE').length} Active
-              </span>
+              <span className="text-sm">🥛</span>
+              <div className="hidden sm:block text-left text-[10px] leading-tight">
+                <span className="text-emerald-400 font-bold block">Subscriptions</span>
+                <span className="font-extrabold text-white text-[10px]">
+                  {subscriptions.filter(s => s.status === 'ACTIVE').length} Active
+                </span>
+              </div>
             </button>
 
             {/* Shopping Cart Button */}
             <button 
               onClick={() => setIsCartOpen(true)}
-              className="flex items-center bg-gradient-to-r from-[#ffd814] to-[#febd69] hover:from-[#f7ca00] hover:to-[#f3a847] text-slate-950 font-extrabold px-4 py-1.5 rounded-lg relative cursor-pointer shadow-md transition transform active:scale-95 border border-amber-400"
+              className="flex items-center bg-gradient-to-r from-[#ffd814] to-[#febd69] hover:from-[#f7ca00] hover:to-[#f3a847] text-slate-950 font-extrabold px-3 sm:px-4 py-1.5 rounded-lg relative cursor-pointer shadow-md transition transform active:scale-95 border border-amber-400 shrink-0"
             >
-              <span className="text-sm font-black tracking-wide">Cart</span>
+              <span className="text-xs sm:text-sm font-black tracking-wide">Cart</span>
               {cartItemCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white font-black text-xs w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-[#131921] animate-bounce">
+                <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white font-black text-[10px] sm:text-xs w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-[#131921] animate-bounce">
                   {cartItemCount}
                 </span>
               )}
+            </button>
+          </div>
+        </div>
+
+        {/* ROW 2: MOBILE FULL-WIDTH SEARCH BAR (visible only on mobile phones) */}
+        <div className="md:hidden px-3 pb-2.5 pt-0.5">
+          <div className="w-full h-10 flex items-stretch rounded-lg overflow-hidden bg-white shadow-sm border border-amber-300 focus-within:ring-2 focus-within:ring-[#febd69]">
+            <div className="flex-1 relative flex items-center">
+              <input 
+                type="text"
+                placeholder="Search products, brands, milk, electronics..."
+                className="w-full h-full pl-3.5 pr-8 text-xs text-gray-900 bg-transparent focus:outline-none"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 text-gray-400 hover:text-gray-700 p-1 rounded-full cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <button 
+              type="button"
+              className="bg-[#febd69] hover:bg-[#f3a847] text-slate-950 px-4 flex items-center justify-center font-bold shrink-0 cursor-pointer active:scale-95"
+              title="Search"
+            >
+              <Search className="w-4 h-4 font-bold" />
             </button>
           </div>
         </div>
@@ -1477,30 +1569,30 @@ export default function App() {
       </header>
 
       {/* HERO BANNER SECTION (Festival Sale Pitch) */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white py-10 px-4 shadow-inner relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white py-6 sm:py-10 px-4 shadow-inner relative overflow-hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-1.5 bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 px-3 py-1 rounded-full text-xs font-bold mb-3 tracking-wide uppercase">
+          <div className="max-w-xl text-center md:text-left">
+            <div className="inline-flex items-center gap-1.5 bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold mb-3 tracking-wide uppercase">
               <Zap className="w-3.5 h-3.5" /> Great India Freedom Sale Live
             </div>
-            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
               Up to <span className="text-[#febd69]">70% OFF</span> on Top Multi-Vendor Brands
             </h1>
-            <p className="text-sm md:text-base text-gray-300 mt-2">
-              Electronics, Fashion, Appliances &amp; Home Essentials shipped directly from verified verified merchants.
+            <p className="text-xs sm:text-sm md:text-base text-gray-300 mt-2">
+              Electronics, Fashion, Appliances &amp; Home Essentials shipped directly from verified merchants.
             </p>
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mt-4 sm:mt-5 flex flex-wrap justify-center md:justify-start gap-2 sm:gap-3">
               <button 
                 onClick={() => setSelectedCategory("Dairy & Fresh Milk")}
-                className="bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black px-5 py-2.5 rounded-lg text-sm transition shadow-lg flex items-center gap-2 cursor-pointer"
+                className="bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm transition shadow-lg flex items-center gap-2 cursor-pointer active:scale-95"
               >
-                🥛 Fresh Milk & Dairy Hub <ArrowRight className="w-4 h-4" />
+                🥛 Fresh Milk Hub <ArrowRight className="w-3.5 h-3.5" />
               </button>
               <button 
                 onClick={() => setSelectedCategory("Electronics")}
-                className="bg-[#febd69] hover:bg-[#f3a847] text-slate-950 font-bold px-4 py-2.5 rounded-lg text-sm transition shadow-lg flex items-center gap-2"
+                className="bg-[#febd69] hover:bg-[#f3a847] text-slate-950 font-bold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm transition shadow-lg flex items-center gap-2 active:scale-95 cursor-pointer"
               >
-                Shop Electronics <ArrowRight className="w-4 h-4" />
+                Shop Electronics <ArrowRight className="w-3.5 h-3.5" />
               </button>
               {/* Super Admin Control: sees Admin Tower & Seller Hub */}
               {isAdmin && (
@@ -1606,17 +1698,17 @@ export default function App() {
         </div>
       </div>
 
-      {/* AMAZON / FLIPKART STYLE CATEGORY LOGOS / ICONS BAR */}
-      <div className="bg-white border-b border-gray-200 py-3.5 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-3 overflow-x-auto">
+      {/* AMAZON / FLIPKART STYLE CATEGORY LOGOS / ICONS BAR (Touch-scrollable on mobile) */}
+      <div className="bg-white border-b border-gray-200 py-2.5 sm:py-3.5 shadow-xs overflow-x-auto">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-start sm:justify-between gap-2 sm:gap-3 min-w-max">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition min-w-[76px] cursor-pointer ${!selectedCategory ? 'bg-amber-50 border border-amber-300 shadow-sm' : 'hover:bg-gray-50'}`}
+            className={`flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-xl transition min-w-[65px] sm:min-w-[76px] cursor-pointer ${!selectedCategory ? 'bg-amber-50 border border-amber-300 shadow-sm' : 'hover:bg-gray-50'}`}
           >
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-xs ${!selectedCategory ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-lg sm:text-xl shadow-xs ${!selectedCategory ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
               ⚡
             </div>
-            <span className={`text-[11px] font-bold text-center ${!selectedCategory ? 'text-amber-800' : 'text-gray-700'}`}>All Stores</span>
+            <span className={`text-[10px] sm:text-[11px] font-bold text-center ${!selectedCategory ? 'text-amber-800' : 'text-gray-700'}`}>All Stores</span>
           </button>
 
           {categories.map(c => {
@@ -1635,12 +1727,12 @@ export default function App() {
               <button
                 key={c.id}
                 onClick={() => setSelectedCategory(c.name)}
-                className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition min-w-[80px] cursor-pointer ${isSelected ? 'bg-blue-50 border border-blue-400 shadow-sm' : 'hover:bg-gray-50'}`}
+                className={`flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-xl transition min-w-[65px] sm:min-w-[80px] cursor-pointer ${isSelected ? 'bg-blue-50 border border-blue-400 shadow-sm' : 'hover:bg-gray-50'}`}
               >
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-xs transition transform hover:scale-110 ${meta.bg} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-xs transition transform hover:scale-110 ${meta.bg} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
                   {meta.icon}
                 </div>
-                <span className={`text-[11px] font-bold text-center line-clamp-1 ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+                <span className={`text-[10px] sm:text-[11px] font-bold text-center line-clamp-1 ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
                   {c.name.split(' ')[0]}
                 </span>
               </button>
@@ -1656,12 +1748,34 @@ export default function App() {
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-                {selectedCategory ? `${selectedCategory}` : "Top Trending Marketplace Catalog"}
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Showing <strong>{filteredProducts.length}</strong> live products • Direct merchant escrow warranty
-              </p>
+              {searchQuery ? (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                      Search Results for <span className="text-blue-600 font-extrabold">"{searchQuery}"</span>
+                    </h2>
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-0.5 rounded-full font-bold transition flex items-center gap-1 cursor-pointer"
+                      title="Clear Search"
+                    >
+                      Clear ✕
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Found <strong>{filteredProducts.length}</strong> product(s) matching your search query
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                    {selectedCategory ? `${selectedCategory}` : "Top Trending Marketplace Catalog"}
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Showing <strong>{filteredProducts.length}</strong> live products • Direct merchant escrow warranty
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Dynamic Sorting & Filter Controls */}
@@ -1744,9 +1858,38 @@ export default function App() {
           </div>
         </div>
 
-        {/* Product Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {filteredProducts.map(p => {
+        {/* Product Cards Grid - 2 columns on phones, 3 on tablet, 4 on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+          {filteredProducts.length === 0 ? (
+            <div className="col-span-full bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-4 shadow-sm my-4">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <Search className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {searchQuery ? `No products found for "${searchQuery}"` : "No products found in this selection"}
+                </h3>
+                <p className="text-xs text-gray-500 max-w-md mx-auto">
+                  Try checking your spelling, using general terms like "milk", "ghee", "oneplus", "shoes", or clear your active search query.
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory(null);
+                    setSelectedBrand('ALL');
+                    setPriceRange('ALL');
+                    setInStockOnly(false);
+                  }}
+                  className="bg-[#febd69] hover:bg-[#f3a847] text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-sm cursor-pointer"
+                >
+                  Clear Search &amp; View All Products
+                </button>
+              </div>
+            </div>
+          ) : (
+            filteredProducts.map(p => {
             const stockUnits = p.stock !== undefined ? p.stock : 25;
             const isOutOfStock = stockUnits <= 0;
             const isLowStock = stockUnits > 0 && stockUnits < 10;
@@ -1791,33 +1934,33 @@ export default function App() {
                 </div>
 
                 {/* Product Details */}
-                <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className="p-2.5 sm:p-4 flex-1 flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center justify-between text-[11px] text-gray-400 mb-1">
-                      <span className="font-semibold text-blue-600">{p.brand}</span>
-                      <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium truncate max-w-[120px]">
+                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-gray-400 mb-1">
+                      <span className="font-semibold text-blue-600 truncate max-w-[80px] sm:max-w-none">{p.brand}</span>
+                      <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium truncate max-w-[80px] sm:max-w-[120px]">
                         {p.storeName}
                       </span>
                     </div>
 
                     <h3 
                       onClick={() => setSelectedProduct(p)}
-                      className="font-semibold text-gray-900 text-sm line-clamp-2 hover:text-blue-600 transition cursor-pointer"
+                      className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2 hover:text-blue-600 transition cursor-pointer leading-snug"
                     >
                       {p.title}
                     </h3>
 
                     {/* Rating & Live Stock Status */}
                     <div className="flex items-center justify-between mt-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                          {p.rating} <Star className="w-2.5 h-2.5 fill-current" />
+                      <div className="flex items-center space-x-1 sm:space-x-1.5">
+                        <span className="bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          {p.rating} <Star className="w-2 sm:w-2.5 h-2 sm:h-2.5 fill-current" />
                         </span>
-                        <span className="text-[11px] text-gray-400">({p.reviews.toLocaleString()})</span>
+                        <span className="text-[10px] sm:text-[11px] text-gray-400">({p.reviews.toLocaleString()})</span>
                       </div>
 
                       {isLowStock && (
-                        <span className="text-[10px] text-amber-600 font-extrabold animate-pulse">
+                        <span className="text-[9px] sm:text-[10px] text-amber-600 font-extrabold animate-pulse">
                           Only {stockUnits} left!
                         </span>
                       )}
@@ -1825,23 +1968,23 @@ export default function App() {
                   </div>
 
                   {/* Price & Add to Cart */}
-                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                      <span className="text-lg font-black text-gray-900">₹{p.basePrice.toLocaleString()}</span>
-                      <span className="text-xs text-gray-400 line-through ml-1.5">₹{p.mrp.toLocaleString()}</span>
+                      <span className="text-base sm:text-lg font-black text-gray-900">₹{p.basePrice.toLocaleString()}</span>
+                      <span className="text-[10px] sm:text-xs text-gray-400 line-through ml-1">₹{p.mrp.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       {isOutOfStock ? (
                         <button 
                           disabled
-                          className="bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed"
+                          className="w-full sm:w-auto bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed"
                         >
                           Sold Out
                         </button>
                       ) : (
                         <button 
                           onClick={() => addToCart(p)}
-                          className="bg-[#ffd814] hover:bg-[#f7ca00] text-gray-900 px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer"
+                          className="w-full sm:w-auto bg-[#ffd814] hover:bg-[#f7ca00] text-gray-900 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer text-center"
                         >
                           Add to Cart
                         </button>
@@ -1851,7 +1994,7 @@ export default function App() {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       </main>
 
